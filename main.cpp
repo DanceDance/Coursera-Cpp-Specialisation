@@ -1,22 +1,17 @@
-#include <cstdint>
-#include <iostream>
-#include <vector>
-#include <numeric>
-#include <algorithm>
+#include <bits/stdc++.h>
+using namespace std;
 
 int main() {
-  int n;
-  std::cin >> n;
-  std::vector<int64_t> days_temp(n);
-  for (auto &x : days_temp)
-    std::cin >> x;
-  int64_t avg = std::accumulate(begin(days_temp), end(days_temp), 0ll);
-  avg /= static_cast<int64_t>(days_temp.size());
-  std::vector<int64_t> filtered_days;
-  for (int i = 0; i < n; i++)
-    if (days_temp[i] > avg)
-      filtered_days.push_back(i);
-  std::cout << filtered_days.size() << '\n';
-  for (auto &x : filtered_days)
-    std::cout << x << " ";
+  int n, r;
+  cin >> n >> r;
+  
+  uint64_t total_weight = 0;
+
+  for (int i = 0; i < n; i++) {
+    int w, h, d;
+    cin >> w >> h >> d;
+    total_weight += static_cast<uint64_t>(w) * h * d * r;
+  }
+
+  cout << total_weight;
 } 
