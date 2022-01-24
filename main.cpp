@@ -1,45 +1,18 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-template <typename T> vector<T> Sqr(const vector<T> &v);
-template <typename K, typename V> map<K, V> Sqr(const map<K, V> &mp);
-template <typename F, typename S> pair<F, S> Sqr(const pair<F, S> &p);
-template <typename T> T Sqr(const T& t);
-
-template <typename T>
-vector<T> Sqr(const vector<T> &v) {
-  vector<T> res;
-  res.reserve(v.size());
-  for (const auto &x : v)
-    res.push_back(Sqr(x));
-  return res;
-}
-
 template <typename K, typename V>
-map<K, V> Sqr(const map<K, V> &mp) {
-  map<K, V> res;
-  for (const auto &[k, v] : mp)
-    res[k] = Sqr(v);
-  return res;
-}
-
-template <typename F, typename S>
-pair<F, S> Sqr(const pair<F, S> &p) {
-  return {Sqr(p.first), Sqr(p.second)};
-}
-
-template <typename T> T Sqr(const T& t) {
-  return t * t;
+V& GetRefStrict(map<K, V>& mp, const K& k) {
+  auto it = mp.find(k);
+  if (it == mp.end())
+    throw runtime_error("Element not found");
+  return it->second;
 }
 
 int main() {
-  map<int, pair<int, int>> map_of_pairs = {
-  {4, {2, 2}},
-  {7, {4, 3}}
-  };
-  cout << "map of pairs:" << endl;
-  for (const auto& x : Sqr(map_of_pairs)) {
-    cout << x.first << ' ' << x.second.first << ' ' << x.second.second << endl;
-  }
+  map<int, string> m = {{0, "value"}};
+  string& item = GetRefStrict(m, 1);
+  item = "newvalue";
+  cout << m[0] << endl; // выведет newvalue
 
 } 
