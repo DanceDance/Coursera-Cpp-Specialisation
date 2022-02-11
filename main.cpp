@@ -1,207 +1,134 @@
-#include <bits/stdc++.h>
-#include <variant>
+#include <iostream>
+#include <map>
+#include <set>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
 using namespace std;
 
-enum class QueryType {
-  NewBus,
-  BusesForStop,
-  StopsForBus,
-  AllBuses
-};
-
-struct Query {
-  QueryType type;
-  string bus;
-  string stop;
-  vector<string> stops;
-};
-
-const map<string, QueryType> StringTypeToEnum {
-  {"NEW_BUS", QueryType::NewBus}, 
-  {"BUSES_FOR_STOP", QueryType::BusesForStop},
-  {"STOPS_FOR_BUS", QueryType::StopsForBus},
-  {"ALL_BUSES", QueryType::AllBuses}
-};
-
-template <typename T>
-istream &operator >> (istream &is, vector<T> &v) {
-  int n;
-  is >> n;
-  vector<T> newv(n);
-  for (auto &x : newv)
-    cin >> x;
-  v = newv;
-  return is;
-}
-
-istream& operator >> (istream& is, Query& q) {
-  string type;
-  is >> type;
-  if (StringTypeToEnum.count(type) == 0) {
-    throw runtime_error("Type unknown: " + type);
-  }
-  q.type = StringTypeToEnum.at(type);
-  switch (q.type) {
-    case QueryType::NewBus:
-      is >> q.bus;
-      is >> q.stops;
-      break;
-    case QueryType::BusesForStop:
-      is >> q.stop;
-      break;
-    case QueryType::StopsForBus:
-      is >> q.bus;
-      break;
-    case QueryType::AllBuses:
-      break;
-  }
-  return is;
-}
-
-template <typename T>
-ostream& operator << (ostream &out, const vector<T> &v) {
+template <class T>
+ostream& operator << (ostream& os, const vector<T>& s) {
+  os << "{";
   bool first = true;
-  for (const auto &x : v) {
-    if (!first)
-      out << " ";
+  for (const auto& x : s) {
+    if (!first) {
+      os << ", ";
+    }
     first = false;
-    out << x;
+    os << x;
   }
-
-  return out;
+  return os << "}";
 }
 
-struct BusesForStopResponse {
-  vector<string> buses;
-};
-
-ostream& operator << (ostream& os, const BusesForStopResponse& r) {
-  if (r.buses.empty())
-    os << "No stop";
-  else {
-    os << r.buses;
-  }
-  return os;
-}
-
-struct StopsForBusResponse {
-  vector<pair<string, vector<string>>> value;
-};
-
-ostream& operator << (ostream& os, const StopsForBusResponse& r) {
-  if (r.value.empty())
-    os << "No bus";
-  else {
-    bool first = true;
-    for (const auto &[stop, buses] : r.value) {
-      if (!first)
-        os << "\n";
-      first = false;
-      os << "Stop " << stop << ": ";
-      if (buses.empty()) {
-        os << "no interchange";
-      } else {
-        os << buses;
-      }
+template <class T>
+ostream& operator << (ostream& os, const set<T>& s) {
+  os << "{";
+  bool first = true;
+  for (const auto& x : s) {
+    if (!first) {
+      os << ", ";
     }
+    first = false;
+    os << x;
   }
-  return os;
+  return os << "}";
 }
 
-struct AllBusesResponse {
-  vector<pair<string, vector<string>>> value;
-};
-
-ostream& operator << (ostream& os, const AllBusesResponse& r) {
-  if (r.value.empty()) {
-    os << "No buses";
-  } else {
-    bool first = true;
-    for (const auto &[bus, stops] : r.value) {
-      if (!first)
-        os << '\n';
-      first = false;
-      os << "Bus " << bus << ": " << stops;
+template <class K, class V>
+ostream& operator << (ostream& os, const map<K, V>& m) {
+  os << "{";
+  bool first = true;
+  for (const auto& kv : m) {
+    if (!first) {
+      os << ", ";
     }
+    first = false;
+    os << kv.first << ": " << kv.second;
   }
-  return os;
+  return os << "}";
 }
 
-class BusManager {
+template<class T, class U>
+void AssertEqual(const T& t, const U& u, const string& hint = {}) {
+  if (t != u) {
+    ostringstream os;
+    os << "Assertion failed: " << t << " != " << u;
+    if (!hint.empty()) {
+       os << " hint: " << hint;
+    }
+    throw runtime_error(os.str());
+  }
+}
+
+void Assert(bool b, const string& hint) {
+  AssertEqual(b, true, hint);
+}
+
+class TestRunner {
 public:
-  void AddBus(const string& bus, const vector<string>& stops) {
-    buses_to_stops[bus] = stops;
-    for (const auto &stop : stops) {
-      stops_to_buses[stop].push_back(bus);
+  template <class TestFunc>
+  void RunTest(TestFunc func, const string& test_name) {
+    try {
+      func();
+      cerr << test_name << " OK" << endl;
+    } catch (exception& e) {
+      ++fail_count;
+      cerr << test_name << " fail: " << e.what() << endl;
+    } catch (...) {
+      ++fail_count;
+      cerr << "Unknown exception caught" << endl;
     }
   }
 
-  BusesForStopResponse GetBusesForStop(const string& stop) const {
-    BusesForStopResponse resp;
-    const auto it = stops_to_buses.find(stop);
-    if (it == stops_to_buses.end())
-      return resp;
-    resp.buses = it->second;
-    return resp;
-  }
-
-  StopsForBusResponse GetStopsForBus(const string& bus) const {
-    StopsForBusResponse resp;
-    if (buses_to_stops.count(bus) == 0)
-      return resp;
-    for (const string &stop : buses_to_stops.at(bus)) {
-      vector<string> other_buses;
-      if (stops_to_buses.count(stop) == 1) {
-        for (const string &other_bus : stops_to_buses.at(stop)) {
-          if (other_bus != bus)
-            other_buses.push_back(other_bus);
-        }
-      }
-      
-      resp.value.emplace_back(stop, other_buses);
+  ~TestRunner() {
+    if (fail_count > 0) {
+      cerr << fail_count << " unit tests failed. Terminate" << endl;
+      exit(1);
     }
-    return resp;
-  }
-
-  AllBusesResponse GetAllBuses() const {
-    AllBusesResponse resp;
-    for (const auto &bus_item: buses_to_stops) {
-      resp.value.push_back(bus_item);
-    }
-    return resp;
   }
 
 private:
-  map<string, vector<string>> buses_to_stops;
-  map<string, vector<string>> stops_to_buses;
+  int fail_count = 0;
 };
 
-// Не меняя тела функции main, реализуйте функции и классы выше
+int GetDistinctRealRootCount(double a, double b, double c) {
+  if (a == 0) {
+    // Linear equation: x = -c / b
+    if (b == 0) {
+      cerr << "B == 0 in linear equation\n";
+      return 0;
+    }
+    return 1;
+  } else {
+    // Quadratic equation
+    double d = b * b - 4 * a * c;
+    if (d < 0) {
+      return 0;
+    } else if (d == 0) {
+      return 1;
+    }
+    return 2;
+  }
+  return 0;
+}
+
+void TestGetDistinctRealRootCount_Linear() {
+  AssertEqual(GetDistinctRealRootCount(0, 5, -10), 1, "Linear1");
+  AssertEqual(GetDistinctRealRootCount(0, 4, 2), 1, "Linear2");
+  AssertEqual(GetDistinctRealRootCount(0, 0, 2), 0, "Linear3");
+}
+
+void TestGetDistinctRealRootCount_Quadratic() {
+  AssertEqual(GetDistinctRealRootCount(1, 6, 3), 2, "Quadratic1");
+  AssertEqual(GetDistinctRealRootCount(100, 1, 100), 0, "Quadratic2");
+  AssertEqual(GetDistinctRealRootCount(2, 4, 2), 1, "Quadratic3");
+}
 
 int main() {
-  int query_count;
-  Query q;
-
-  cin >> query_count;
-
-  BusManager bm;
-  for (int i = 0; i < query_count; ++i) {
-    cin >> q;
-    switch (q.type) {
-    case QueryType::NewBus:
-      bm.AddBus(q.bus, q.stops);
-      break;
-    case QueryType::BusesForStop:
-      cout << bm.GetBusesForStop(q.stop) << endl;
-      break;
-    case QueryType::StopsForBus:
-      cout << bm.GetStopsForBus(q.bus) << endl;
-      break;
-    case QueryType::AllBuses:
-      cout << bm.GetAllBuses() << endl;
-      break;
-    }
-  }
-
+  TestRunner runner;
+  runner.RunTest(TestGetDistinctRealRootCount_Linear, "Linear test");
+  runner.RunTest(TestGetDistinctRealRootCount_Quadratic, "Quadratic test");
   return 0;
 }
