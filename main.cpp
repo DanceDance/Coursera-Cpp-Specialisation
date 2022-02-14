@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <numeric> 
 
 using namespace std;
 
@@ -93,42 +94,97 @@ private:
   int fail_count = 0;
 };
 
-int GetDistinctRealRootCount(double a, double b, double c) {
-  if (a == 0) {
-    // Linear equation: x = -c / b
-    if (b == 0) {
-      cerr << "B == 0 in linear equation\n";
-      return 0;
+class Rational {
+public:
+
+  Rational() : numerator_(0), denominator_(1) {}
+
+  Rational(int numerator, int denominator) {
+    if (numerator == 0) {
+      numerator_ = 0;
+      denominator_ = 1;
+      return;
     }
-    return 1;
-  } else {
-    // Quadratic equation
-    double d = b * b - 4 * a * c;
-    if (d < 0) {
-      return 0;
-    } else if (d == 0) {
-      return 1;
-    }
-    return 2;
+    bool negative = false;
+    if ((numerator < 0 && denominator >= 0) || (numerator >= 0 && denominator < 0))
+      negative = true;
+
+    numerator = abs(numerator);
+    denominator = abs(denominator);
+    int gcd_nd = gcd(numerator, denominator);
+    numerator /= gcd_nd;
+    denominator /= gcd_nd;
+    numerator_ = numerator;
+    denominator_ = denominator;
+    if (negative)
+      numerator_ = -numerator_;
   }
-  return 0;
+
+  int Numerator() const {
+    return numerator_;
+  }
+
+  int Denominator() const {
+    return denominator_;
+  }
+  private:
+  int numerator_;
+  int denominator_;
+};
+
+void TestDefaultConstructor() {
+  Rational r;
+  AssertEqual(r.Numerator(), 0, "DefaultContrustor1");  
+  AssertEqual(r.Denominator(), 1, "DefaultContrustor2");
 }
 
-void TestGetDistinctRealRootCount_Linear() {
-  AssertEqual(GetDistinctRealRootCount(0, 5, -10), 1, "Linear1");
-  AssertEqual(GetDistinctRealRootCount(0, 4, 2), 1, "Linear2");
-  AssertEqual(GetDistinctRealRootCount(0, 0, 2), 0, "Linear3");
+void TestGcd() {
+  Rational r;
+
+  r = Rational(10, 20);
+  AssertEqual(r.Numerator(), 1, "Gcd1");
+  AssertEqual(r.Denominator(), 2, "Gcd2");
+
+  r = Rational(15, 45);
+  AssertEqual(r.Numerator(), 1, "Gcd3");
+  AssertEqual(r.Denominator(), 3, "Gcd4");
+
+  r = Rational(5, 17);
+  AssertEqual(r.Numerator(), 5, "Gcd5");
+  AssertEqual(r.Denominator(), 17, "Gcd6");
+
+  r = Rational(6, 9);
+  AssertEqual(r.Numerator(), 2, "Gcd7");
+  AssertEqual(r.Denominator(), 3, "Gcd8");
 }
 
-void TestGetDistinctRealRootCount_Quadratic() {
-  AssertEqual(GetDistinctRealRootCount(1, 6, 3), 2, "Quadratic1");
-  AssertEqual(GetDistinctRealRootCount(100, 1, 100), 0, "Quadratic2");
-  AssertEqual(GetDistinctRealRootCount(2, 4, 2), 1, "Quadratic3");
+void TestSign() {
+  Rational r;
+
+  r = Rational(-5, 20);
+  AssertEqual(r.Numerator(), -1, "Sign1");
+  AssertEqual(r.Denominator(), 4, "Sign2");
+
+  r = Rational(-10, -45);
+  AssertEqual(r.Numerator(), 2, "Sign3");
+  AssertEqual(r.Denominator(), 9, "Sign4");
+
+  r = Rational(12, -40);
+  AssertEqual(r.Numerator(), -3, "Sign5");
+  AssertEqual(r.Denominator(), 10, "Sign6");
+}
+
+void TestZeroNumerator() {
+  Rational r(0, 999);
+  AssertEqual(r.Numerator(), 0, "ZeroNumerator1");
+  AssertEqual(r.Denominator(), 1, "ZeroNumerator2");
 }
 
 int main() {
   TestRunner runner;
-  runner.RunTest(TestGetDistinctRealRootCount_Linear, "Linear test");
-  runner.RunTest(TestGetDistinctRealRootCount_Quadratic, "Quadratic test");
+  runner.RunTest(TestDefaultConstructor, "TestDefaultConstructor");
+  runner.RunTest(TestGcd, "TestGcd");
+  runner.RunTest(TestSign, "TestSign");
+  runner.RunTest(TestZeroNumerator, "TestZeroNumerator");
   return 0;
 }
