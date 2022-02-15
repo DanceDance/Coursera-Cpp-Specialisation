@@ -5,7 +5,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <numeric> 
 
 using namespace std;
 
@@ -94,97 +93,54 @@ private:
   int fail_count = 0;
 };
 
-class Rational {
-public:
+bool IsPalindrom(const string& str) {
+  for (int i = 0; i < (int)str.size() / 2; i++) {
+    if (str[i] != str[(int) str.size() - i - 1])
+      return false;
+  }
+  return true;
+}
 
-  Rational() : numerator_(0), denominator_(1) {}
+void TestPredefined() {
+  Assert(IsPalindrom(""), "Empty String");
+  Assert(IsPalindrom("a"), "a");
+  Assert(!IsPalindrom("abc"), "abc");
+  Assert(!IsPalindrom(" aaa"), " aaa");
+  Assert(!IsPalindrom("aabcaa"), "aabcaa");
+  Assert(!IsPalindrom("aaabcdaaa"), "aaabcdaaa");
+  Assert(IsPalindrom("wasitacaroracatisaw"), "wasitacaroracatisaw");
+  Assert(IsPalindrom(",,..,,"), ",,..,,");
+  Assert(IsPalindrom(",,.,,"), ",,.,,");
+  Assert(!IsPalindrom("AbBa"), "AbBa");
+  Assert(IsPalindrom("      "), "      ");
+  Assert(!IsPalindrom("AAAaaa"), "AAAaaa");
+  Assert(IsPalindrom(" AAA "), " AAA ");
+  Assert(!IsPalindrom("aaaabcdeaaaa"), "aaaabcdeaaaa");
+}
 
-  Rational(int numerator, int denominator) {
-    if (numerator == 0) {
-      numerator_ = 0;
-      denominator_ = 1;
-      return;
+void TestDifferentLength() {
+  for (int l = 2; l < 100; l++) {
+    string s(l, ' ');
+    for (int i = 0; i < l; i++) {
+      s[i] = (char)i;
     }
-    bool negative = false;
-    if ((numerator < 0 && denominator >= 0) || (numerator >= 0 && denominator < 0))
-      negative = true;
-
-    numerator = abs(numerator);
-    denominator = abs(denominator);
-    int gcd_nd = gcd(numerator, denominator);
-    numerator /= gcd_nd;
-    denominator /= gcd_nd;
-    numerator_ = numerator;
-    denominator_ = denominator;
-    if (negative)
-      numerator_ = -numerator_;
+    Assert(!IsPalindrom(s), "LengthTest: " + to_string(l));
   }
-
-  int Numerator() const {
-    return numerator_;
-  }
-
-  int Denominator() const {
-    return denominator_;
-  }
-  private:
-  int numerator_;
-  int denominator_;
-};
-
-void TestDefaultConstructor() {
-  Rational r;
-  AssertEqual(r.Numerator(), 0, "DefaultContrustor1");  
-  AssertEqual(r.Denominator(), 1, "DefaultContrustor2");
 }
 
-void TestGcd() {
-  Rational r;
-
-  r = Rational(10, 20);
-  AssertEqual(r.Numerator(), 1, "Gcd1");
-  AssertEqual(r.Denominator(), 2, "Gcd2");
-
-  r = Rational(15, 45);
-  AssertEqual(r.Numerator(), 1, "Gcd3");
-  AssertEqual(r.Denominator(), 3, "Gcd4");
-
-  r = Rational(5, 17);
-  AssertEqual(r.Numerator(), 5, "Gcd5");
-  AssertEqual(r.Denominator(), 17, "Gcd6");
-
-  r = Rational(6, 9);
-  AssertEqual(r.Numerator(), 2, "Gcd7");
-  AssertEqual(r.Denominator(), 3, "Gcd8");
-}
-
-void TestSign() {
-  Rational r;
-
-  r = Rational(-5, 20);
-  AssertEqual(r.Numerator(), -1, "Sign1");
-  AssertEqual(r.Denominator(), 4, "Sign2");
-
-  r = Rational(-10, -45);
-  AssertEqual(r.Numerator(), 2, "Sign3");
-  AssertEqual(r.Denominator(), 9, "Sign4");
-
-  r = Rational(12, -40);
-  AssertEqual(r.Numerator(), -3, "Sign5");
-  AssertEqual(r.Denominator(), 10, "Sign6");
-}
-
-void TestZeroNumerator() {
-  Rational r(0, 999);
-  AssertEqual(r.Numerator(), 0, "ZeroNumerator1");
-  AssertEqual(r.Denominator(), 1, "ZeroNumerator2");
+void TestDifferentCharacters() {
+  for (char c = 0; c < 127; c++) {
+    string s10(10, c);
+    string s11(11, c);
+    Assert(IsPalindrom(s10), "s10, character: " + to_string(c));
+    Assert(IsPalindrom(s11), "s11, character: " + to_string(c));
+  }
 }
 
 int main() {
   TestRunner runner;
-  runner.RunTest(TestDefaultConstructor, "TestDefaultConstructor");
-  runner.RunTest(TestGcd, "TestGcd");
-  runner.RunTest(TestSign, "TestSign");
-  runner.RunTest(TestZeroNumerator, "TestZeroNumerator");
+  runner.RunTest(TestPredefined, "TestPredefined");
+  runner.RunTest(TestDifferentLength, "TestDifferentLength");
+  runner.RunTest(TestDifferentCharacters, "TestDifferentCharacters");
   return 0;
 }
