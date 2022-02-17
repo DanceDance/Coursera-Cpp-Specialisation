@@ -6,32 +6,25 @@
 
 using namespace std;
 
-vector<string> SplitIntoWords(const string& s) {
-  vector<string> res;
-  auto start_it = s.begin();
-  while (true) {
-    auto end_it = find(start_it, end(s), ' ');
-    res.push_back({start_it, end_it});
-    start_it = end_it;
-    if (start_it == end(s))
-      break;
-    start_it++;
-  }
-  return res;
+template <typename T>
+void RemoveDuplicates(vector<T>& elements) {
+  sort(begin(elements), end(elements));
+  elements.erase(unique(begin(elements), end(elements)), end(elements));
 }
 
 int main() {
-  string s = "C Cpp Java Python";
-
-  vector<string> words = SplitIntoWords(s);
-  cout << words.size() << " ";
-  for (auto it = begin(words); it != end(words); ++it) {
-    if (it != begin(words)) {
-      cout << "/";
-    }
-    cout << *it;
+  vector<int> v1 = {6, 4, 7, 6, 4, 4, 0, 1};
+  RemoveDuplicates(v1);
+  for (int x : v1) {
+    cout << x << " ";
   }
   cout << endl;
   
+  vector<string> v2 = {"C", "C++", "C++", "C", "C++"};
+  RemoveDuplicates(v2);
+  for (const string& s : v2) {
+    cout << s << " ";
+  }
+  cout << endl;
   return 0;
 }
