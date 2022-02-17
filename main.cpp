@@ -1,38 +1,25 @@
-#include "bus_manager.h"
-#include "query.h"
-
-#include <string>
-#include <iostream>
-#include <cassert>
+#include <algorithm>
 #include <vector>
-#include <map>
+#include <iostream>
 
 using namespace std;
 
-int main() {
-  int query_count;
-  Query q;
-
-  cin >> query_count;
-
-  BusManager bm;
-  for (int i = 0; i < query_count; ++i) {
-    cin >> q;
-    switch (q.type) {
-    case QueryType::NewBus:
-      bm.AddBus(q.bus, q.stops);
-      break;
-    case QueryType::BusesForStop:
-      cout << bm.GetBusesForStop(q.stop) << endl;
-      break;
-    case QueryType::StopsForBus:
-      cout << bm.GetStopsForBus(q.bus) << endl;
-      break;
-    case QueryType::AllBuses:
-      cout << bm.GetAllBuses() << endl;
-      break;
-    }
+void PrintVectorPart(const vector<int>& numbers) {
+  auto it = numbers.end();
+  it = find_if(begin(numbers), end(numbers), 
+      [] (const int &x) { return x < 0; });
+  while (it != begin(numbers)) {
+    it--;
+    cout << *it << " ";
   }
+}
 
+int main() {
+  PrintVectorPart({6, 1, 8, -5, 4});
+  cout << endl;
+  PrintVectorPart({-6, 1, 8, -5, 4});  // ничего не выведется
+  cout << endl;
+  PrintVectorPart({6, 1, 8, 5, 4});
+  cout << endl;
   return 0;
 }
