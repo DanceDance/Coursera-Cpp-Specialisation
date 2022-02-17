@@ -1,3 +1,4 @@
+#include <algorithm> 
 #include <string>
 #include <set>
 #include <vector>
@@ -5,19 +6,32 @@
 
 using namespace std;
 
-template <typename T>
-vector<T> FindGreaterElements(const set<T>& elements, const T& border) {
-  auto it = elements.upper_bound(border);
-  return vector<T>(it, elements.end());
+vector<string> SplitIntoWords(const string& s) {
+  vector<string> res;
+  auto start_it = s.begin();
+  while (true) {
+    auto end_it = find(start_it, end(s), ' ');
+    res.push_back({start_it, end_it});
+    start_it = end_it;
+    if (start_it == end(s))
+      break;
+    start_it++;
+  }
+  return res;
 }
 
 int main() {
-  for (int x : FindGreaterElements(set<int>{1, 5, 7, 8}, 5)) {
-    cout << x << " ";
+  string s = "C Cpp Java Python";
+
+  vector<string> words = SplitIntoWords(s);
+  cout << words.size() << " ";
+  for (auto it = begin(words); it != end(words); ++it) {
+    if (it != begin(words)) {
+      cout << "/";
+    }
+    cout << *it;
   }
   cout << endl;
   
-  string to_find = "Python";
-  cout << FindGreaterElements(set<string>{"C", "C++"}, to_find).size() << endl;
   return 0;
 }
