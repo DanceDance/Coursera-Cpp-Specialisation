@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <numeric>
+#include <iterator>
 
 using namespace std;
 
@@ -13,14 +14,17 @@ void MergeSort(RandomIt range_begin, RandomIt range_end) {
   if (n < 2)
     return;
   vector<typename RandomIt::value_type> tmp(range_begin, range_end);
-  MergeSort(begin(tmp), begin(tmp) + n/2);
-  MergeSort(begin(tmp) + n/2, end(tmp));
-  merge(begin(tmp), begin(tmp) + n/2, begin(tmp) + n/2, end(tmp), range_begin);
+  MergeSort(begin(tmp), begin(tmp) + n/3);
+  MergeSort(begin(tmp) + n/3, begin(tmp) + 2 * n / 3);
+  MergeSort(begin(tmp) + 2 * n / 3, end(tmp));
+  vector<typename RandomIt::value_type> tmp2;
+  merge(begin(tmp), begin(tmp) + n/3, begin(tmp) + n/3, begin(tmp) + 2 * n / 3, back_inserter(tmp2));
+  merge(begin(tmp2), end(tmp2), begin(tmp) + 2 * n / 3, end(tmp), range_begin);
 }
 
 
 int main() {
-  vector<int> v = {6, 4, 7, 6, 4, 4, 0, 1};
+  vector<int> v = {6, 4, 7, 6, 4, 4, 0, 1, 5};
   MergeSort(begin(v), end(v));
   for (int x : v) {
     cout << x << " ";
