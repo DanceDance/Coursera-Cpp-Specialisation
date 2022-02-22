@@ -8,27 +8,34 @@
 
 using namespace std;
 
-template <typename RandomIt>
-void MergeSort(RandomIt range_begin, RandomIt range_end) {
-  int n = range_end - range_begin;
-  if (n < 2)
-    return;
-  vector<typename RandomIt::value_type> tmp(range_begin, range_end);
-  MergeSort(begin(tmp), begin(tmp) + n/3);
-  MergeSort(begin(tmp) + n/3, begin(tmp) + 2 * n / 3);
-  MergeSort(begin(tmp) + 2 * n / 3, end(tmp));
-  vector<typename RandomIt::value_type> tmp2;
-  merge(begin(tmp), begin(tmp) + n/3, begin(tmp) + n/3, begin(tmp) + 2 * n / 3, back_inserter(tmp2));
-  merge(begin(tmp2), end(tmp2), begin(tmp) + 2 * n / 3, end(tmp), range_begin);
-}
-
+set<int>::const_iterator FindNearestElement(
+    const set<int>& numbers,
+    int border) {
+      auto it = numbers.lower_bound(border);
+      if (it == begin(numbers))
+        return it;
+      auto pit = prev(it);
+      if (it == end(numbers))
+        return pit;
+      if (abs(*pit - border) <= abs(*it - border))
+        return pit;
+      return it;
+    }
 
 int main() {
-  vector<int> v = {6, 4, 7, 6, 4, 4, 0, 1, 5};
-  MergeSort(begin(v), end(v));
-  for (int x : v) {
-    cout << x << " ";
-  }
-  cout << endl;
+  set<int> numbers = {1, 4, 6};
+  cout <<
+      *FindNearestElement(numbers, 0) << " " <<
+      *FindNearestElement(numbers, 3) << " " <<
+      *FindNearestElement(numbers, 5) << " " <<
+      *FindNearestElement(numbers, 6) << " " <<
+      *FindNearestElement(numbers, 100) << endl;
+      
+  set<int> empty_set;
+  
+  cout << (FindNearestElement(empty_set, 8) == end(empty_set)) << endl;
+
+  set<int> one_element {5};
+  cout << *FindNearestElement(one_element, 3) << " " << *FindNearestElement(one_element, 6) << "\n";
   return 0;
 }
