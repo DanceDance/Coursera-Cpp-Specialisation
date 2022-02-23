@@ -1,55 +1,127 @@
 #include <iostream>
 #include <string>
+#include <vector>
+#include <iomanip>
+#include <memory>
+#include <math.h>
 
 using namespace std;
 
-void SendSms(const string& number, const string& message) {
-  cout << "Send '" << message << "' to number " << number << endl;
-}
+constexpr double PI = 3.14;
 
-void SendEmail(const string& email, const string& message) {
-  cout << "Send '" << message << "' to e-mail "  << email << endl;
-}
-
-class INotifier {
+class Figure {
   public:
-  virtual void Notify(const string& message) = 0;
+  virtual string Name() const = 0;
+  virtual double Perimeter() const = 0;
+  virtual double Area() const = 0;
 };
 
-class SmsNotifier : public INotifier {
+class Triangle : public Figure {
   public:
-  SmsNotifier(const string &phone_number) : phone_number_(phone_number) {}
+  Triangle(double a, double b, double c) : a_(a), b_(b), c_(c) {}
 
-  void Notify(const string& message) override {
-    SendSms(phone_number_, message);
+  virtual string Name() const override {
+    return "TRIANGLE";
+  }
+
+  virtual double Perimeter() const override {
+    return a_ + b_ + c_;
+  }
+
+  virtual double Area() const override {
+    double s = (a_ + b_ + c_) / 2;
+    return sqrt(s * (s - a_) * (s - b_) * (s - c_));
   }
 
   private:
-  const string phone_number_;
+  const double a_;
+  const double b_;
+  const double c_;
 };
 
-class EmailNotifier : public INotifier {
+class Rect : public Figure {
   public:
-  EmailNotifier(const string &email) : email_(email) {}
+  Rect(double w, double h) : w_(w), h_(h) {}
 
-  void Notify(const string& message) override {
-    SendEmail(email_, message);
+  virtual string Name() const override {
+    return "RECT";
+  }
+
+  virtual double Perimeter() const override {
+    return 2 * w_ + 2 * h_;
+  }
+
+  virtual double Area() const override {
+    return w_ * h_;
   }
 
   private:
-  const string email_;
+  const double w_;
+  const double h_;
 };
 
-void Notify(INotifier& notifier, const string& message) {
-  notifier.Notify(message);
-}
+class Circle : public Figure {
+  public:
+  Circle(double r) : r_(r) {}
 
+  virtual string Name() const override {
+    return "CIRCLE";
+  }
+
+  virtual double Perimeter() const override {
+    return 2 * PI * r_;
+  }
+
+  virtual double Area() const override {
+    return PI * r_ * r_;
+  }
+
+  private:
+  const double r_;
+};
+
+shared_ptr<Figure> CreateFigure(istream &is) {
+  string figure_str;
+  is >> figure_str;
+  if (figure_str == "RECT") {
+    double w, h;
+    is >> w >> h;
+    return make_shared<Rect>(w, h);
+  }
+  if (figure_str == "TRIANGLE") {
+    double a, b, c;
+    is >> a >> b >> c;
+    return make_shared<Triangle>(a, b, c);
+  }
+  if (figure_str == "CIRCLE") {
+    double r;
+    is >> r;
+    return make_shared<Circle>(r);
+  }
+  return shared_ptr<Figure>();  // Should never happen
+}
 
 int main() {
-  SmsNotifier sms{"+7-495-777-77-77"};
-  EmailNotifier email{"na-derevnyu@dedushke.ru"};
+  vector<shared_ptr<Figure>> figures;
+  for (string line; getline(cin, line); ) {
+    istringstream is(line);
 
-  Notify(sms, "I have White belt in C++");
-  Notify(email, "And want a Yellow one");
+    string command;
+    is >> command;
+    if (command == "ADD") {
+      // Пропускаем "лишние" ведущие пробелы.
+      // Подробнее об std::ws можно узнать здесь:
+      // https://en.cppreference.com/w/cpp/io/manip/ws
+      is >> ws;
+      figures.push_back(CreateFigure(is));
+    } else if (command == "PRINT") {
+      for (const auto& current_figure : figures) {
+        cout << fixed << setprecision(3)
+             << current_figure->Name() << " "
+             << current_figure->Perimeter() << " "
+             << current_figure->Area() << endl;
+      }
+    }
+  }
   return 0;
 }
