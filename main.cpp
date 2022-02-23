@@ -1,45 +1,55 @@
-#include <algorithm> 
-#include <string>
-#include <set>
-#include <vector>
 #include <iostream>
-#include <numeric>
-#include <iterator>
-#include <sstream>
-#include <map>
+#include <string>
 
 using namespace std;
 
+void SendSms(const string& number, const string& message) {
+  cout << "Send '" << message << "' to number " << number << endl;
+}
+
+void SendEmail(const string& email, const string& message) {
+  cout << "Send '" << message << "' to e-mail "  << email << endl;
+}
+
+class INotifier {
+  public:
+  virtual void Notify(const string& message) = 0;
+};
+
+class SmsNotifier : public INotifier {
+  public:
+  SmsNotifier(const string &phone_number) : phone_number_(phone_number) {}
+
+  void Notify(const string& message) override {
+    SendSms(phone_number_, message);
+  }
+
+  private:
+  const string phone_number_;
+};
+
+class EmailNotifier : public INotifier {
+  public:
+  EmailNotifier(const string &email) : email_(email) {}
+
+  void Notify(const string& message) override {
+    SendEmail(email_, message);
+  }
+
+  private:
+  const string email_;
+};
+
+void Notify(INotifier& notifier, const string& message) {
+  notifier.Notify(message);
+}
+
+
 int main() {
-  static map<string, int> priority {
-    {"+", 1},
-    {"-", 1},
-    {"*", 2},
-    {"/", 2}  
-  };
-  string first_var;
-  cin >> first_var;
-  int n;
-  cin >> n;
-  vector<string> vars(n);
-  vector<string> ops(n);
+  SmsNotifier sms{"+7-495-777-77-77"};
+  EmailNotifier email{"na-derevnyu@dedushke.ru"};
 
-  for (int i = 0; i < n; i++) {
-    cin >> ops[i];
-    cin >> vars[i];    
-  }
-  int parentheses_count = 0;
-  stringstream right;
-  right << first_var;
-
-  for (int i = 0; i < n; i++) {
-    if (i > 0 && priority[ops[i - 1]] < priority[ops[i]]) {
-      right << ')';
-      parentheses_count++;
-    }
-    right << ' ' << ops[i] << ' ' << vars[i];
-  }
-  cout << string(parentheses_count, '(');
-  cout << right.str();
+  Notify(sms, "I have White belt in C++");
+  Notify(email, "And want a Yellow one");
   return 0;
 }
