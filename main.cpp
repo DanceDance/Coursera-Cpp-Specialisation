@@ -1,127 +1,72 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <iomanip>
-#include <memory>
-#include <math.h>
 
 using namespace std;
 
-constexpr double PI = 3.14;
+class Person {
+public:
+  Person(const string& name, const string& type) : Name(name), Type(type) {}
 
-class Figure {
-  public:
-  virtual string Name() const = 0;
-  virtual double Perimeter() const = 0;
-  virtual double Area() const = 0;
+  virtual void Walk(const string &destination) const {
+    cout << Type << ": " << Name << " walks to: " << destination << endl;
+  }
+
+  const string Name;
+  const string Type;
 };
 
-class Triangle : public Figure {
-  public:
-  Triangle(double a, double b, double c) : a_(a), b_(b), c_(c) {}
+class Student : public Person {
+public:
+  Student(const string& name, const string& favouriteSong)
+    : Person(name, "Student"), FavouriteSong(favouriteSong) {}
 
-  virtual string Name() const override {
-    return "TRIANGLE";
+  virtual void Walk(const string& destination) const override {
+    Person::Walk(destination);
+    SingSong();
   }
 
-  virtual double Perimeter() const override {
-    return a_ + b_ + c_;
+  virtual void SingSong() const {
+    cout << Type << ": " << Name << " sings a song: " << FavouriteSong << endl;
   }
 
-  virtual double Area() const override {
-    double s = (a_ + b_ + c_) / 2;
-    return sqrt(s * (s - a_) * (s - b_) * (s - c_));
-  }
-
-  private:
-  const double a_;
-  const double b_;
-  const double c_;
+  const string FavouriteSong;
 };
 
-class Rect : public Figure {
-  public:
-  Rect(double w, double h) : w_(w), h_(h) {}
+class Teacher : public Person {
+public:
+  Teacher(const string &name, const string& subject)
+    : Person(name, "Teacher"), Subject(subject) {}
 
-  virtual string Name() const override {
-    return "RECT";
+  virtual void Teach() const {
+    cout << Type << ": " << Name << " teaches: " << Subject << endl;
   }
 
-  virtual double Perimeter() const override {
-    return 2 * w_ + 2 * h_;
-  }
-
-  virtual double Area() const override {
-    return w_ * h_;
-  }
-
-  private:
-  const double w_;
-  const double h_;
+  const string Subject;
 };
 
-class Circle : public Figure {
-  public:
-  Circle(double r) : r_(r) {}
+class Policeman : public Person {
+public:
+  Policeman(const string &name) : Person(name, "Policeman") {}
 
-  virtual string Name() const override {
-    return "CIRCLE";
+  virtual void Check(const Person& p) const {
+    cout << Type << ": " << Name << " checks " << p.Type << ". " << p.Type << "'s name is: " << p.Name << endl;
   }
-
-  virtual double Perimeter() const override {
-    return 2 * PI * r_;
-  }
-
-  virtual double Area() const override {
-    return PI * r_ * r_;
-  }
-
-  private:
-  const double r_;
 };
 
-shared_ptr<Figure> CreateFigure(istream &is) {
-  string figure_str;
-  is >> figure_str;
-  if (figure_str == "RECT") {
-    double w, h;
-    is >> w >> h;
-    return make_shared<Rect>(w, h);
-  }
-  if (figure_str == "TRIANGLE") {
-    double a, b, c;
-    is >> a >> b >> c;
-    return make_shared<Triangle>(a, b, c);
-  }
-  if (figure_str == "CIRCLE") {
-    double r;
-    is >> r;
-    return make_shared<Circle>(r);
-  }
-  return shared_ptr<Figure>();  // Should never happen
+void VisitPlaces(const Person& person, const vector<string>& places) {
+    for (const auto& place : places) {
+        person.Walk(place);
+    }
 }
 
 int main() {
-  vector<shared_ptr<Figure>> figures;
-  for (string line; getline(cin, line); ) {
-    istringstream is(line);
+    Teacher t("Jim", "Math");
+    Student s("Ann", "We will rock you");
+    Policeman p("Bob");
 
-    string command;
-    is >> command;
-    if (command == "ADD") {
-      // Пропускаем "лишние" ведущие пробелы.
-      // Подробнее об std::ws можно узнать здесь:
-      // https://en.cppreference.com/w/cpp/io/manip/ws
-      is >> ws;
-      figures.push_back(CreateFigure(is));
-    } else if (command == "PRINT") {
-      for (const auto& current_figure : figures) {
-        cout << fixed << setprecision(3)
-             << current_figure->Name() << " "
-             << current_figure->Perimeter() << " "
-             << current_figure->Area() << endl;
-      }
-    }
-  }
-  return 0;
+    VisitPlaces(t, {"Moscow", "London"});
+    p.Check(s);
+    VisitPlaces(s, {"Moscow", "London"});
+    return 0;
 }
