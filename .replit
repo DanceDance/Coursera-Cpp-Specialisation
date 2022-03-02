@@ -1,1 +1,1 @@
-run="g++ -Wall -std=c++17 -I . ./*.cpp -o main ; ./main < input.txt > output.txt"
+run="g++ -Wall -Werror -Wl,--fatal-warnings -std=c++17 -I . ./*.cpp -o main && ./main < input.txt > output.txt"
