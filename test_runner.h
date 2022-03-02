@@ -1,12 +1,10 @@
-#ifndef TEST_RUNNER_H
-#define TEST_RUNNER_H
 #pragma once
 
+#include <sstream>
+#include <stdexcept>
 #include <iostream>
 #include <map>
 #include <set>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -56,11 +54,11 @@ ostream& operator << (ostream& os, const map<K, V>& m) {
 
 template<class T, class U>
 void AssertEqual(const T& t, const U& u, const string& hint = {}) {
-  if (t != u) {
+  if (!(t == u)) {
     ostringstream os;
     os << "Assertion failed: " << t << " != " << u;
     if (!hint.empty()) {
-      os << " hint: " << hint;
+       os << " hint: " << hint;
     }
     throw runtime_error(os.str());
   }
@@ -97,4 +95,20 @@ private:
   int fail_count = 0;
 };
 
-#endif
+#define ASSERT_EQUAL(x, y) {            \
+  ostringstream os;                     \
+  os << #x << " != " << #y << ", "      \
+    << __FILE__ << ":" << __LINE__;     \
+  AssertEqual(x, y, os.str());          \
+}
+
+#define ASSERT(x) {                     \
+  ostringstream os;                     \
+  os << #x << " is false, "             \
+    << __FILE__ << ":" << __LINE__;     \
+  Assert(x, os.str());                  \
+}
+
+#define RUN_TEST(tr, func) \
+  tr.RunTest(func, #func)
+
