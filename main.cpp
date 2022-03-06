@@ -1,20 +1,14 @@
-#include "test_runner.h"
-
-#include <ostream>
 #include <string>
+#include <vector>
 using namespace std;
 
-#define PRINT_VALUES(out, x, y) (out) << (x) << endl << (y) << endl
+#define COMBINE1(X,Y) X##Y 
+#define COMBINE(X,Y) COMBINE1(X,Y)
+#define UNIQ_ID COMBINE(id, __LINE__)
 
 int main() {
-  TestRunner tr;
-  tr.RunTest([] {
-    ostringstream output;
-    PRINT_VALUES(output, 5, "red belt");
-    ASSERT_EQUAL(output.str(), "5\nred belt\n");
-    output = ostringstream();
-    PRINT_VALUES(output, 25 + 5, string("red ") + "belt");
-    ASSERT_EQUAL(output.str(), "30\nred belt\n");
-  }, "PRINT_VALUES usage example");
-  return 0;
+  int UNIQ_ID = 0;
+  string UNIQ_ID = "hello";
+  vector<string> UNIQ_ID = {"hello", "world"};
+  vector<int> UNIQ_ID = {1, 2, 3, 4};
 }
