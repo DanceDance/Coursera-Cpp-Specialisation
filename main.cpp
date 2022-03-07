@@ -2,60 +2,108 @@
 
 #include <utility>
 #include <cstddef>
+#include <vector>
+#include <stdexcept>
 using namespace std;
 
 template<typename T>
-class Table {
+class Deque {
 public:
-  Table(size_t rows, size_t cols) : table(rows, vector<T>(cols)) {}
-
-  pair<size_t, size_t> Size() const {
-    if (Rows() == 0 || Cols() == 0)
-      return {0, 0};
-    return {Rows(), Cols()};
+  bool Empty() const {
+    return front_.empty() && back_.empty();
   }
 
-  void Resize(size_t new_rows, size_t new_cols) {
-    table.resize(new_rows);
-    for (auto &row : table)
-      row.resize(new_cols);
+  size_t Size() const {
+    return front_.size() + back_.size();
   }
 
-  vector<T>& operator[] (int row) {
-    return table[row];
+  T& operator[](size_t index) {
+    return At(index);
   }
 
-  const vector<T>& operator[] (int row) const {
-    return table[row];
+  const T& operator[](size_t index) const {
+    return At(index);
   }
 
-  size_t Rows() const {
-    return table.size();
+  T& At(size_t index) {
+    if (index >= Size())
+      throw out_of_range("Index is out of range: " + to_string(index));
+    if (index < front_.size())
+      return front_[(int)front_.size() - index - 1];
+    return back_[(int)index - front_.size()];
   }
 
-  size_t Cols() const {
-    if (table.empty())
-      return 0;
-    return table[0].size();
+  const T& At(size_t index) const {
+    if (index >= Size())
+      throw out_of_range("Index is out of range: " + to_string(index));
+    if (index < front_.size())
+      return front_.at((int)front_.size() - index - 1);
+    return back_.at((int)index - front_.size());
+  }
+
+  T& Front() {
+    return At(0);
+  }
+
+  const T& Front() const {
+    return At(0);
+  }
+
+  T& Back() {
+    return At((int)Size() - 1);
+  }
+
+  const T& Back() const {
+    return At((int)Size() - 1);
+  }
+
+  void PushFront(const T& value) {
+    front_.push_back(value);
+  }
+
+  void PushBack(const T& value) {
+    back_.push_back(value);
   }
 
 private:
-  vector<vector<T>> table;
+  vector<T> front_;
+  vector<T> back_;
 };
 
-void TestTable() {
-  Table<int> t(1, 1);
-  ASSERT_EQUAL(t.Size().first, 1u);
-  ASSERT_EQUAL(t.Size().second, 1u);
-  t[0][0] = 42;
-  ASSERT_EQUAL(t[0][0], 42);
-  t.Resize(3, 4);
-  ASSERT_EQUAL(t.Size().first, 3u);
-  ASSERT_EQUAL(t.Size().second, 4u);
+void TestDeque() {
+  {
+    Deque<int> dq;
+    ASSERT(dq.Empty());
+    ASSERT_EQUAL(dq.Size(), 0u);
+    dq.PushFront(0);
+    dq.PushFront(2);
+    ASSERT_EQUAL(dq.Front(), 2);
+    ASSERT_EQUAL(dq.Back(), 0);
+    ASSERT(!dq.Empty());
+    ASSERT_EQUAL(dq.Size(), 2u);
+    ASSERT_EQUAL(dq[0], 2);
+    ASSERT_EQUAL(dq[1], 0);
+    dq.PushBack(5);
+    dq.PushBack(6);
+    dq.PushBack(7);
+    ASSERT_EQUAL(dq.Size(), 5u);
+    ASSERT_EQUAL(dq[2], 5);
+    ASSERT_EQUAL(dq[3], 6);
+    ASSERT_EQUAL(dq.Front(), 2);
+    ASSERT_EQUAL(dq.Back(), 7);
+  }
+  {
+    Deque<int> dq;
+    try {
+      dq[1];
+    } catch (out_of_range& ex) {
+      ASSERT_EQUAL(ex.what(), string("Index is out of range: 1"));
+    }
+  }
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestTable);
+  RUN_TEST(tr, TestDeque);
   return 0;
 }
