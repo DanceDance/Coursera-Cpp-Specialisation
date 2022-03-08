@@ -1,109 +1,146 @@
 #include "test_runner.h"
 
-#include <utility>
-#include <cstddef>
+#include <numeric>
+#include <iostream>
 #include <vector>
-#include <stdexcept>
+#include <string>
 using namespace std;
 
-template<typename T>
-class Deque {
-public:
-  bool Empty() const {
-    return front_.empty() && back_.empty();
-  }
+// Реализуйте шаблон класса Paginator
 
-  size_t Size() const {
-    return front_.size() + back_.size();
-  }
-
-  T& operator[](size_t index) {
-    return At(index);
-  }
-
-  const T& operator[](size_t index) const {
-    return At(index);
-  }
-
-  T& At(size_t index) {
-    if (index >= Size())
-      throw out_of_range("Index is out of range: " + to_string(index));
-    if (index < front_.size())
-      return front_[(int)front_.size() - index - 1];
-    return back_[(int)index - front_.size()];
-  }
-
-  const T& At(size_t index) const {
-    if (index >= Size())
-      throw out_of_range("Index is out of range: " + to_string(index));
-    if (index < front_.size())
-      return front_.at((int)front_.size() - index - 1);
-    return back_.at((int)index - front_.size());
-  }
-
-  T& Front() {
-    return At(0);
-  }
-
-  const T& Front() const {
-    return At(0);
-  }
-
-  T& Back() {
-    return At((int)Size() - 1);
-  }
-
-  const T& Back() const {
-    return At((int)Size() - 1);
-  }
-
-  void PushFront(const T& value) {
-    front_.push_back(value);
-  }
-
-  void PushBack(const T& value) {
-    back_.push_back(value);
-  }
-
+template <typename Iterator>
+class IteratorRange {
 private:
-  vector<T> front_;
-  vector<T> back_;
+  Iterator begin_;
+  Iterator end_;
+public:
+  IteratorRange(Iterator begin, Iterator end) : begin_(begin), end_(end) {}
+  Iterator begin() { return begin_; }
+  Iterator end() { return end_; }
+  Iterator begin() const { return begin_; }
+  Iterator end() const { return end_; }
+  size_t size() const { return end_ - begin_; }
 };
 
-void TestDeque() {
-  {
-    Deque<int> dq;
-    ASSERT(dq.Empty());
-    ASSERT_EQUAL(dq.Size(), 0u);
-    dq.PushFront(0);
-    dq.PushFront(2);
-    ASSERT_EQUAL(dq.Front(), 2);
-    ASSERT_EQUAL(dq.Back(), 0);
-    ASSERT(!dq.Empty());
-    ASSERT_EQUAL(dq.Size(), 2u);
-    ASSERT_EQUAL(dq[0], 2);
-    ASSERT_EQUAL(dq[1], 0);
-    dq.PushBack(5);
-    dq.PushBack(6);
-    dq.PushBack(7);
-    ASSERT_EQUAL(dq.Size(), 5u);
-    ASSERT_EQUAL(dq[2], 5);
-    ASSERT_EQUAL(dq[3], 6);
-    ASSERT_EQUAL(dq.Front(), 2);
-    ASSERT_EQUAL(dq.Back(), 7);
-  }
-  {
-    Deque<int> dq;
-    try {
-      dq[1];
-    } catch (out_of_range& ex) {
-      ASSERT_EQUAL(ex.what(), string("Index is out of range: 1"));
+template <typename Iterator>
+class Paginator {
+private:
+  vector<IteratorRange<Iterator>> v; 
+public:
+  Paginator(Iterator begin, Iterator end, size_t page_size) {
+    size_t n = end - begin;
+    for (size_t i = 0; i < n; i += page_size) {
+      size_t cur_page_size = min(page_size, n - i);
+      v.push_back(IteratorRange(begin + i, begin + i + cur_page_size));
     }
   }
+  auto begin() { return v.begin(); }
+  auto end() { return v.end(); }
+  size_t size() const { return v.size(); }
+};
+
+template <typename C>
+auto Paginate(C& c, size_t page_size) {
+  return Paginator(begin(c), end(c), page_size);
+}
+
+void TestPageCounts() {
+  vector<int> v(15);
+
+  ASSERT_EQUAL(Paginate(v, 1).size(), v.size());
+  ASSERT_EQUAL(Paginate(v, 3).size(), 5u);
+  ASSERT_EQUAL(Paginate(v, 5).size(), 3u);
+  ASSERT_EQUAL(Paginate(v, 4).size(), 4u);
+  ASSERT_EQUAL(Paginate(v, 15).size(), 1u);
+  ASSERT_EQUAL(Paginate(v, 150).size(), 1u);
+  ASSERT_EQUAL(Paginate(v, 14).size(), 2u);
+}
+
+void TestLooping() {
+  vector<int> v(15);
+  iota(begin(v), end(v), 1);
+
+  Paginator<vector<int>::iterator> paginate_v(v.begin(), v.end(), 6);
+  ostringstream os;
+  for (const auto& page : paginate_v) {
+    for (int x : page) {
+      os << x << ' ';
+    }
+    os << '\n';
+  }
+  ASSERT_EQUAL(os.str(), "1 2 3 4 5 6 \n7 8 9 10 11 12 \n13 14 15 \n");
+}
+
+void TestModification() {
+  vector<string> vs = {"one", "two", "three", "four", "five"};
+  for (auto page : Paginate(vs, 2)) {
+    for (auto& word : page) {
+      word[0] = toupper(word[0]);
+    }
+  }
+
+  const vector<string> expected = {"One", "Two", "Three", "Four", "Five"};
+  ASSERT_EQUAL(vs, expected);
+}
+
+void TestPageSizes() {
+  string letters(26, ' ');
+
+  Paginator letters_pagination(letters.begin(), letters.end(), 11);
+  vector<size_t> page_sizes;
+  for (const auto& page : letters_pagination) {
+    page_sizes.push_back(page.size());
+  }
+
+  const vector<size_t> expected = {11, 11, 4};
+  ASSERT_EQUAL(page_sizes, expected);
+}
+
+void TestConstContainer() {
+  const string letters = "abcdefghijklmnopqrstuvwxyz";
+
+  vector<string> pages;
+  for (const auto& page : Paginate(letters, 10)) {
+    pages.push_back(string(page.begin(), page.end()));
+  }
+
+  const vector<string> expected = {"abcdefghij", "klmnopqrst", "uvwxyz"};
+  ASSERT_EQUAL(pages, expected);
+}
+
+void TestPagePagination() {
+  vector<int> v(22);
+  iota(begin(v), end(v), 1);
+
+  vector<vector<int>> lines;
+  for (const auto& split_by_9 : Paginate(v, 9)) {
+    for (const auto& split_by_4 : Paginate(split_by_9, 4)) {
+      lines.push_back({});
+      for (int item : split_by_4) {
+        lines.back().push_back(item);
+      }
+    }
+  }
+
+  const vector<vector<int>> expected = {
+      {1, 2, 3, 4},
+      {5, 6, 7, 8},
+      {9},
+      {10, 11, 12, 13},
+      {14, 15, 16, 17},
+      {18},
+      {19, 20, 21, 22}
+  };
+  ASSERT_EQUAL(lines, expected);
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestDeque);
-  return 0;
+  RUN_TEST(tr, TestPageCounts);
+  RUN_TEST(tr, TestLooping);
+  RUN_TEST(tr, TestModification);
+  RUN_TEST(tr, TestPageSizes);
+  RUN_TEST(tr, TestConstContainer);
+  RUN_TEST(tr, TestPagePagination);
 }
+
