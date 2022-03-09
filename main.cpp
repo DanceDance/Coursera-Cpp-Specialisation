@@ -1,42 +1,53 @@
-#include <algorithm>
-#include <cmath>
+#include <iomanip>
 #include <iostream>
+#include <vector>
 #include <map>
-#include <string>
 #include <set>
+#include <utility>
 
 using namespace std;
 
-class RouteManager {
+class ReadingManager {
 public:
-  void AddRoute(int start, int finish) {
-    reachable_lists_[start].insert(finish);
-    reachable_lists_[finish].insert(start);
-  }
-  int FindNearestFinish(int start, int finish) const {
-    int result = abs(start - finish);
-    if (reachable_lists_.count(start) < 1) {
-        return result;
+  ReadingManager() : progress_(MAX_PAGE + 1) {}
+
+  void Read(int user_id, int page_count) {
+    auto it = users_.find(user_id);
+    if (it != end(users_)) {
+      progress_[it->second]--;
     }
-    const auto& reachable_stations = reachable_lists_.at(start);
-    if (!reachable_stations.empty()) {
-      auto lb = reachable_stations.lower_bound(finish);
-      if (lb != end(reachable_stations))
-        result = min(result, abs(*lb - finish));
-      if (lb != begin(reachable_stations)) {
-        lb--;
-        result = min(result, abs(*lb - finish));
-      }
-    }
-    return result;
+    users_[user_id] = page_count;
+    progress_[page_count]++;
   }
+
+  double Cheer(int user_id) const {
+    auto user_it = users_.find(user_id);
+    if (user_it == end(users_))
+      return 0;
+    if (users_.size() == 1)
+      return 1;
+    int less_users = 0;
+    for (int i = 0; i < user_it->second; i++) {
+      less_users += progress_[i];
+    }
+    return static_cast<double>(less_users) / (users_.size() - 1);
+  }
+
 private:
-  map<int, set<int>> reachable_lists_;
+  static const int MAX_PAGE = 1000;
+  map<int, int> users_;
+  vector<int> progress_;
 };
 
 
 int main() {
-  RouteManager routes;
+  // Для ускорения чтения данных отключается синхронизация
+  // cin и cout с stdio,
+  // а также выполняется отвязка cin от cout
+  ios::sync_with_stdio(false);
+  cin.tie(nullptr);
+
+  ReadingManager manager;
 
   int query_count;
   cin >> query_count;
@@ -44,12 +55,15 @@ int main() {
   for (int query_id = 0; query_id < query_count; ++query_id) {
     string query_type;
     cin >> query_type;
-    int start, finish;
-    cin >> start >> finish;
-    if (query_type == "ADD") {
-      routes.AddRoute(start, finish);
-    } else if (query_type == "GO") {
-      cout << routes.FindNearestFinish(start, finish) << "\n";
+    int user_id;
+    cin >> user_id;
+
+    if (query_type == "READ") {
+      int page_count;
+      cin >> page_count;
+      manager.Read(user_id, page_count);
+    } else if (query_type == "CHEER") {
+      cout << setprecision(6) << manager.Cheer(user_id) << "\n";
     }
   }
 
