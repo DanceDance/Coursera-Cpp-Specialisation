@@ -1,47 +1,57 @@
 #include <algorithm>
-#include <string>
-#include <vector>
+#include <cmath>
 #include <iostream>
+#include <map>
+#include <string>
 #include <set>
-#include <sstream>
 
 using namespace std;
 
-class Learner {
- private:
-  set<string> dict;
-
- public:
-  int Learn(const vector<string>& words) {
-    int newWords = 0;
-    for (const auto& word : words) {
-      if (!dict.count(word)) {
-        ++newWords;
-        dict.insert(word);
+class RouteManager {
+public:
+  void AddRoute(int start, int finish) {
+    reachable_lists_[start].insert(finish);
+    reachable_lists_[finish].insert(start);
+  }
+  int FindNearestFinish(int start, int finish) const {
+    int result = abs(start - finish);
+    if (reachable_lists_.count(start) < 1) {
+        return result;
+    }
+    const auto& reachable_stations = reachable_lists_.at(start);
+    if (!reachable_stations.empty()) {
+      auto lb = reachable_stations.lower_bound(finish);
+      if (lb != end(reachable_stations))
+        result = min(result, abs(*lb - finish));
+      if (lb != begin(reachable_stations)) {
+        lb--;
+        result = min(result, abs(*lb - finish));
       }
     }
-    return newWords;
+    return result;
   }
-
-  vector<string> KnownWords() {
-    return vector<string>(begin(dict), end(dict));
-  }
+private:
+  map<int, set<int>> reachable_lists_;
 };
 
+
 int main() {
-  Learner learner;
-  string line;
-  while (getline(cin, line)) {
-    vector<string> words;
-    stringstream ss(line);
-    string word;
-    while (ss >> word) {
-      words.push_back(word);
+  RouteManager routes;
+
+  int query_count;
+  cin >> query_count;
+
+  for (int query_id = 0; query_id < query_count; ++query_id) {
+    string query_type;
+    cin >> query_type;
+    int start, finish;
+    cin >> start >> finish;
+    if (query_type == "ADD") {
+      routes.AddRoute(start, finish);
+    } else if (query_type == "GO") {
+      cout << routes.FindNearestFinish(start, finish) << "\n";
     }
-    cout << learner.Learn(words) << "\n";
   }
-  cout << "=== known words ===\n";
-  for (auto word : learner.KnownWords()) {
-    cout << word << "\n";
-  }
+
+  return 0;
 }
