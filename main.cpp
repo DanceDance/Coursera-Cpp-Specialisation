@@ -1,78 +1,90 @@
 #include "test_runner.h"
 
 #include <algorithm>
-#include <iostream>
-#include <string>
-#include <queue>
-#include <stdexcept>
-#include <set>
+#include <numeric>
 using namespace std;
 
-template <class T>
-class ObjectPool {
-public:
-  T* Allocate() {
-    auto ptr = TryAllocate();
-    if (ptr == nullptr) {
-      ptr = new T;
-      in_use.insert(ptr);
-    }
-    return ptr;
+template <typename T>
+void Swap(T* first, T* second) {
+  swap(*first, *second);
+}
+
+template <typename T>
+void SortPointers(vector<T*>& pointers) {
+  sort(begin(pointers), end(pointers), [] (const T* lhs, const T* rhs) { 
+    return *lhs < *rhs;
+  });
+}
+
+template <typename T>
+void ReversedCopy(T* source, size_t count, T* destination) {
+  //vector<T*> source_copy(source, source + count);
+  vector<T> source_copy(count);
+  for (size_t i = 0; i < count; i++)
+    source_copy[count - i - 1] = source[i];
+  for (size_t i = 0; i < count; i++)
+    destination[i] = source_copy[i];
+  
+}
+
+void TestSwap() {
+  int a = 1;
+  int b = 2;
+  Swap(&a, &b);
+  ASSERT_EQUAL(a, 2);
+  ASSERT_EQUAL(b, 1);
+
+  string h = "world";
+  string w = "hello";
+  Swap(&h, &w);
+  ASSERT_EQUAL(h, "hello");
+  ASSERT_EQUAL(w, "world");
+}
+
+void TestSortPointers() {
+  int one = 1;
+  int two = 2;
+  int three = 3;
+
+  vector<int*> pointers;
+  pointers.push_back(&two);
+  pointers.push_back(&three);
+  pointers.push_back(&one);
+
+  SortPointers(pointers);
+
+  ASSERT_EQUAL(pointers.size(), 3u);
+  ASSERT_EQUAL(*pointers[0], 1);
+  ASSERT_EQUAL(*pointers[1], 2);
+  ASSERT_EQUAL(*pointers[2], 3);
+}
+
+void TestReverseCopy() {
+  const size_t count = 7;
+
+  int* source = new int[count];
+  int* dest = new int[count];
+
+  for (size_t i = 0; i < count; ++i) {
+    source[i] = i + 1;
   }
+  ReversedCopy(source, count, dest);
+  const vector<int> expected1 = {7, 6, 5, 4, 3, 2, 1};
+  ASSERT_EQUAL(vector<int>(dest, dest + count), expected1);
 
-  T* TryAllocate() {
-    if (freed.empty())
-      return nullptr;
-    auto ptr = freed.front();
-    freed.pop_front();
-    in_use.insert(ptr);
-    return ptr;
-  }
+  // Области памяти могут перекрываться
+  ReversedCopy(source, count - 1, source + 1);
+  const vector<int> expected2 = {1, 6, 5, 4, 3, 2, 1};
+  ASSERT_EQUAL(vector<int>(source, source + count), expected2);
 
-  void Deallocate(T* object) {
-    auto it = in_use.find(object);
-    if (it == in_use.end())
-      throw invalid_argument("Deallocation failed, object is not in use.");
-    freed.push_back(*it);
-    in_use.erase(it);
-  }
-
-  ~ObjectPool() {
-    for (auto ptr : in_use)
-      delete ptr;
-    for (auto ptr : freed)
-      delete ptr;
-  }
-
-private:
-  deque<T*> freed;
-  set<T*> in_use;
-};
-
-void TestObjectPool() {
-  ObjectPool<string> pool;
-
-  auto p1 = pool.Allocate();
-  auto p2 = pool.Allocate();
-  auto p3 = pool.Allocate();
-
-  *p1 = "first";
-  *p2 = "second";
-  *p3 = "third";
-
-  pool.Deallocate(p2);
-  ASSERT_EQUAL(*pool.Allocate(), "second");
-
-  pool.Deallocate(p3);
-  pool.Deallocate(p1);
-  ASSERT_EQUAL(*pool.Allocate(), "third");
-  ASSERT_EQUAL(*pool.Allocate(), "first");
-
-  pool.Deallocate(p1);
+  delete[] dest;
+  delete[] source;
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestObjectPool);
+  RUN_TEST(tr, TestSwap);
+  RUN_TEST(tr, TestSortPointers);
+  RUN_TEST(tr, TestReverseCopy);
   return 0;
 }
