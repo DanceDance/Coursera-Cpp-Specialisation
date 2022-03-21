@@ -1,90 +1,52 @@
+#include "simple_vector.h"
 #include "test_runner.h"
 
 #include <algorithm>
-#include <numeric>
+#include <iostream>
+#include <vector>
+#include <string>
 using namespace std;
 
-template <typename T>
-void Swap(T* first, T* second) {
-  swap(*first, *second);
-}
+void TestConstruction() {
+  SimpleVector<int> empty;
+  ASSERT_EQUAL(empty.Size(), 0u);
+  ASSERT_EQUAL(empty.Capacity(), 0u);
+  ASSERT(empty.begin() == empty.end());
 
-template <typename T>
-void SortPointers(vector<T*>& pointers) {
-  sort(begin(pointers), end(pointers), [] (const T* lhs, const T* rhs) { 
-    return *lhs < *rhs;
-  });
-}
-
-template <typename T>
-void ReversedCopy(T* source, size_t count, T* destination) {
-  //vector<T*> source_copy(source, source + count);
-  vector<T> source_copy(count);
-  for (size_t i = 0; i < count; i++)
-    source_copy[count - i - 1] = source[i];
-  for (size_t i = 0; i < count; i++)
-    destination[i] = source_copy[i];
-  
-}
-
-void TestSwap() {
-  int a = 1;
-  int b = 2;
-  Swap(&a, &b);
-  ASSERT_EQUAL(a, 2);
-  ASSERT_EQUAL(b, 1);
-
-  string h = "world";
-  string w = "hello";
-  Swap(&h, &w);
-  ASSERT_EQUAL(h, "hello");
-  ASSERT_EQUAL(w, "world");
-}
-
-void TestSortPointers() {
-  int one = 1;
-  int two = 2;
-  int three = 3;
-
-  vector<int*> pointers;
-  pointers.push_back(&two);
-  pointers.push_back(&three);
-  pointers.push_back(&one);
-
-  SortPointers(pointers);
-
-  ASSERT_EQUAL(pointers.size(), 3u);
-  ASSERT_EQUAL(*pointers[0], 1);
-  ASSERT_EQUAL(*pointers[1], 2);
-  ASSERT_EQUAL(*pointers[2], 3);
-}
-
-void TestReverseCopy() {
-  const size_t count = 7;
-
-  int* source = new int[count];
-  int* dest = new int[count];
-
-  for (size_t i = 0; i < count; ++i) {
-    source[i] = i + 1;
+  SimpleVector<string> five_strings(5);
+  ASSERT_EQUAL(five_strings.Size(), 5u);
+  ASSERT(five_strings.Size() <= five_strings.Capacity());
+  for (auto& item : five_strings) {
+    ASSERT(item.empty());
   }
-  ReversedCopy(source, count, dest);
-  const vector<int> expected1 = {7, 6, 5, 4, 3, 2, 1};
-  ASSERT_EQUAL(vector<int>(dest, dest + count), expected1);
+  five_strings[2] = "Hello";
+  ASSERT_EQUAL(five_strings[2], "Hello");
+}
 
-  // Области памяти могут перекрываться
-  ReversedCopy(source, count - 1, source + 1);
-  const vector<int> expected2 = {1, 6, 5, 4, 3, 2, 1};
-  ASSERT_EQUAL(vector<int>(source, source + count), expected2);
+template<typename T>
+void PrintVector(SimpleVector<T> &v) {
+  cerr << "(" << v.Size() << "):";
+  for (int i = 0; i < (int)v.Size(); i++)
+    cerr << v[i] << " ";
+  cerr << endl;
+}
 
-  delete[] dest;
-  delete[] source;
+void TestPushBack() {
+  SimpleVector<int> v;
+  for (int i = 10; i >= 1; --i) {
+    v.PushBack(i);
+    ASSERT(v.Size() <= v.Capacity());
+  }
+  sort(begin(v), end(v));
+
+  const vector<int> expected = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  ASSERT_EQUAL(v.Size(), expected.size());
+  ASSERT(equal(begin(v), end(v), begin(expected)));
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestSwap);
-  RUN_TEST(tr, TestSortPointers);
-  RUN_TEST(tr, TestReverseCopy);
+  RUN_TEST(tr, TestConstruction);
+  RUN_TEST(tr, TestPushBack);
   return 0;
 }
