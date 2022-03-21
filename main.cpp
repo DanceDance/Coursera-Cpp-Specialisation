@@ -1,110 +1,78 @@
-#include <iomanip>
-#include <iostream>
-#include <vector>
-#include <map>
-#include <set>
-#include <utility>
-#include <tuple>
+#include "test_runner.h"
 
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <queue>
+#include <stdexcept>
+#include <set>
 using namespace std;
 
-class BookingManager {
+template <class T>
+class ObjectPool {
 public:
-  void Book(int64_t time, const string& hotel_name, int client_id, int room_count) {
-    int64_t old_time = time - SECONDS_IN_DAY;
-    ProcessOldTime(old_time);
-    AddEntry(time, hotel_name, client_id, room_count);
+  T* Allocate() {
+    auto ptr = TryAllocate();
+    if (ptr == nullptr) {
+      ptr = new T;
+      in_use.insert(ptr);
+    }
+    return ptr;
   }
 
-  int Clients(const string& hotel_room) const {
-    auto client_it = clients_.find(hotel_room);
-    if (client_it == end(clients_)) {
-      return 0;
-    }
-    return client_it->second.size();
+  T* TryAllocate() {
+    if (freed.empty())
+      return nullptr;
+    auto ptr = freed.front();
+    freed.pop_front();
+    in_use.insert(ptr);
+    return ptr;
   }
 
-  int Rooms(const string& hotel_room) const {
-    auto room_it = rooms_.find(hotel_room);
-    if (room_it == end(rooms_)) {
-      return 0;
-    }
-    return room_it->second;
+  void Deallocate(T* object) {
+    auto it = in_use.find(object);
+    if (it == in_use.end())
+      throw invalid_argument("Deallocation failed, object is not in use.");
+    freed.push_back(*it);
+    in_use.erase(it);
+  }
+
+  ~ObjectPool() {
+    for (auto ptr : in_use)
+      delete ptr;
+    for (auto ptr : freed)
+      delete ptr;
   }
 
 private:
-  static const int SECONDS_IN_DAY = 86'400;
-  set<tuple<int64_t, string, int, int>> entries_;
-  map<string, map<int, int>> clients_; // Key: hotel_name, value: (client_id, number of clients)
-  map<string, int> rooms_;
-
-  void ProcessOldTime(int64_t old_time) {
-    for (auto it = begin(entries_); it != end(entries_);) {
-      const auto& [time, hotel_name, client_id, room_count] = *it;
-      if (time > old_time)
-        return;
-      RemoveEntry(time, hotel_name, client_id, room_count);
-      it = entries_.erase(it);
-    }
-  }
-
-  void AddEntry(int64_t time, const string& hotel_name, int client_id, int room_count) {
-    clients_[hotel_name][client_id]++;
-    rooms_[hotel_name] += room_count;
-    entries_.insert({time, hotel_name, client_id, room_count});
-  }
-
-  void RemoveEntry(int64_t time, const string& hotel_name, int client_id, int room_count) {
-    // Handle clients
-    auto hotel_it = clients_.find(hotel_name);
-    auto client_it = hotel_it->second.find(client_id);
-    client_it->second--;
-    if (client_it->second == 0) {
-      hotel_it->second.erase(client_it);
-    }
-    if (hotel_it->second.empty()) {
-      clients_.erase(hotel_it);
-    }
-    // Handle rooms
-    auto room_it = rooms_.find(hotel_name);
-    room_it->second -= room_count;
-    if (room_it->second == 0) {
-      rooms_.erase(room_it);
-    }
-  }
+  deque<T*> freed;
+  set<T*> in_use;
 };
 
+void TestObjectPool() {
+  ObjectPool<string> pool;
+
+  auto p1 = pool.Allocate();
+  auto p2 = pool.Allocate();
+  auto p3 = pool.Allocate();
+
+  *p1 = "first";
+  *p2 = "second";
+  *p3 = "third";
+
+  pool.Deallocate(p2);
+  ASSERT_EQUAL(*pool.Allocate(), "second");
+
+  pool.Deallocate(p3);
+  pool.Deallocate(p1);
+  ASSERT_EQUAL(*pool.Allocate(), "third");
+  ASSERT_EQUAL(*pool.Allocate(), "first");
+
+  pool.Deallocate(p1);
+}
+
 int main() {
-  ios::sync_with_stdio(false);
-  cin.tie(nullptr);
-
-  BookingManager manager;
-
-  int query_count;
-  cin >> query_count;
-
-  for (int query_id = 0; query_id < query_count; ++query_id) {
-    string query_type;
-    cin >> query_type;
-    if (query_type == "BOOK") {
-      int64_t time;
-      string hotel_name;
-      int client_id;
-      int room_count;
-      cin >> time >> hotel_name >> client_id >> room_count;
-      manager.Book(time, hotel_name, client_id, room_count);
-    } else if (query_type == "CLIENTS") {
-      string hotel_name;
-      cin >> hotel_name;
-      cout << manager.Clients(hotel_name) << '\n';
-    } else if (query_type == "ROOMS") {
-      string hotel_name;
-      cin >> hotel_name;
-      cout << manager.Rooms(hotel_name) << '\n';
-    } else {
-      cerr << "Unknown query type: " << query_type << '\n';
-    }
-  }
-
+  TestRunner tr;
+  RUN_TEST(tr, TestObjectPool);
   return 0;
 }
