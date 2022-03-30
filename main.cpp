@@ -1,128 +1,68 @@
-#include "stack_vector.h"
-
 #include "test_runner.h"
-#include "profile.h"
+#include <string>
+#include <list>
+#include <map>
+#include <string_view>
 
-#include <random>
-#include <stdexcept>
-#include <iostream>
-#include <vector>
 using namespace std;
 
-void TestConstruction() {
-  StackVector<int, 10> v;
-  ASSERT_EQUAL(v.Size(), 0u);
-  ASSERT_EQUAL(v.Capacity(), 10u);
-
-  StackVector<int, 8> u(5);
-  ASSERT_EQUAL(u.Size(), 5u);
-  ASSERT_EQUAL(u.Capacity(), 8u);
-
-  try {
-    StackVector<int, 10> u(50);
-    Assert(false, "Expect invalid_argument for too large size");
-  } catch (invalid_argument&) {
-  } catch (...) {
-    Assert(false, "Unexpected exception for too large size");
+class Translator {
+public:
+  void Add(string_view source, string_view target) {
+    source = AddString(source);
+    target = AddString(target);
+    forward_db_[source] = target;
+    backward_db_[target] = source;
   }
-}
-
-void TestPushBack() {
-  StackVector<int, 5> v;
-  for (size_t i = 0; i < v.Capacity(); ++i) {
-    v.PushBack(i);
+  string_view TranslateForward(string_view source) const {
+    auto it = forward_db_.find(source);
+    if (it == forward_db_.end())
+      return "";
+    return it->second;
+  }
+  string_view TranslateBackward(string_view target) const {
+    auto it = backward_db_.find(target);
+    if (it == backward_db_.end())
+      return "";
+    return it->second;
   }
 
-  try {
-    v.PushBack(0);
-    Assert(false, "Expect overflow_error for PushBack in full vector");
-  } catch (overflow_error&) {
-  } catch (...) {
-    Assert(false, "Unexpected exception for PushBack in full vector");
-  }
-}
+private:
+  map<string_view, string_view> forward_db_;
+  map<string_view, string_view> backward_db_;
+  map<string_view, string_view> words_db_;
+  list<string> string_db_;
 
-void TestPopBack() {
-  StackVector<int, 5> v;
-  for (size_t i = 1; i <= v.Capacity(); ++i) {
-    v.PushBack(i);
+  string_view AddString(string_view str) {
+    auto it = words_db_.find(str);
+    if (it == words_db_.end()) {
+      string_db_.emplace_back(str);
+      words_db_[string_db_.back()] = string_db_.back();
+      return string_db_.back();
+    }
+    return it->second;
   }
-  for (int i = v.Size(); i > 0; --i) {
-    ASSERT_EQUAL(v.PopBack(), i);
-  }
+};
 
-  try {
-    v.PopBack();
-    Assert(false, "Expect underflow_error for PopBack from empty vector");
-  } catch (underflow_error&) {
-  } catch (...) {
-    Assert(false, "Unexpected exception for PopBack from empty vector");
-  }
-}
+void TestSimple() {
+  Translator translator;
+  translator.Add(string("okno"), string("window"));
+  translator.Add(string("stol"), string("table"));
+  ASSERT_EQUAL(translator.TranslateForward("okno"), "window");
+  
+  translator.Add(string("okno"), string("window1"));
+  ASSERT_EQUAL(translator.TranslateForward("okno"), "window1");
+  translator.Add(string("okno"), string("window2"));
+  ASSERT_EQUAL(translator.TranslateForward("okno"), "window2");
+  translator.Add(string("okno"), string("window3"));
+  ASSERT_EQUAL(translator.TranslateForward("okno"), "window3");
 
-void TestIterator() {
-  StackVector<int, 5> v;
-  ASSERT(begin(v) == end(v));
-  for (int i = 0; i < 5; i++)
-    v.PushBack(i);
-  int idx = 0;
-  for (auto &x : v)
-    ASSERT(x == idx++);
-  idx = 0;
-  for (const auto &x : v)
-    ASSERT(x == idx++);
+  ASSERT_EQUAL(translator.TranslateBackward("table"), "stol");
+  ASSERT_EQUAL(translator.TranslateBackward("stol"), "");
 }
 
 int main() {
-  {
-    TestRunner tr;
-    RUN_TEST(tr, TestConstruction);
-    RUN_TEST(tr, TestPushBack);
-    RUN_TEST(tr, TestPopBack);
-    RUN_TEST(tr, TestIterator);
-  }
+  TestRunner tr;
+  RUN_TEST(tr, TestSimple);
   return 0;
-  cerr << "Running benchmark..." << endl;
-  const size_t max_size = 2500;
-
-  default_random_engine re;
-  uniform_int_distribution<int> value_gen(1, max_size);
-
-  vector<vector<int>> test_data(50000);
-  for (auto& cur_vec : test_data) {
-    cur_vec.resize(value_gen(re));
-    for (int& x : cur_vec) {
-      x = value_gen(re);
-    }
-  }
-
-  {
-    LOG_DURATION("vector w/o reserve");
-    for (auto& cur_vec : test_data) {
-      vector<int> v;
-      for (int x : cur_vec) {
-        v.push_back(x);
-      }
-    }
-  }
-  {
-    LOG_DURATION("vector with reserve");
-    for (auto& cur_vec : test_data) {
-      vector<int> v;
-      v.reserve(cur_vec.size());
-      for (int x : cur_vec) {
-        v.push_back(x);
-      }
-    }
-  }
-  {
-    LOG_DURATION("StackVector");
-    for (auto& cur_vec : test_data) {
-      StackVector<int, max_size> v;
-      for (int x : cur_vec) {
-        v.PushBack(x);
-      }
-    }
-  }
-  cerr << "Done" << endl;
 }
