@@ -1,158 +1,103 @@
-#include <string>
-#include <list>
 #include "test_runner.h"
+#include "http_request.h"
+#include "stats.h"
+
+#include <map>
+#include <string_view>
 using namespace std;
 
-template <typename It>
-It safe_next(It it, It end, size_t n) {
-  while(it != end && n--)
-      it++;
-  return it;
-}
-
-class Editor {
- public:
-  // Реализуйте конструктор по умолчанию и объявленные методы
-  Editor() : cursor_(text_.begin()) {}
-  void Left() {
-    if (cursor_ != text_.begin())
-      cursor_--;
-  }
-  void Right() {
-    if (cursor_ != text_.end())
-      cursor_++;
-  }
-  void Insert(char token) {
-    text_.insert(cursor_, token);
-  }
-  void Cut(size_t tokens = 1) {
-    auto copy_end = CopyInternal(tokens);
-    text_.erase(cursor_, copy_end);
-    cursor_ = copy_end;
+Stats ServeRequests(istream& input) {
+  Stats result;
+  for (string line; getline(input, line); ) {
+    const HttpRequest req = ParseRequest(line);
     
+    result.AddUri(req.uri);
+    result.AddMethod(req.method);
   }
-  void Copy(size_t tokens = 1) {
-    CopyInternal(tokens);
-  }
-  void Paste() {
-    for (const char &c: clipboard_)
-      Insert(c);
-  }
-  string GetText() const {
-    return string(begin(text_), end(text_));
-  }
-  char CursorPos() const {
-    if (cursor_ == text_.end())
-      return 'X';
-    return *cursor_;
-  }
-private:
-  string clipboard_;
-  list<char> text_;
-  list<char>::iterator cursor_;
-
-  list<char>::iterator CopyInternal(size_t tokens) {
-    auto copy_end = safe_next(cursor_, end(text_), tokens);
-    clipboard_ = string(cursor_, copy_end);
-    return copy_end;
-  }
-};
-
-void TypeText(Editor& editor, const string& text) {
-  for(char c : text) {
-    editor.Insert(c);
-  }
+  return result;
 }
 
-void TestEditing() {
-  {
-    Editor editor;
+void TestParseRequest() {
+  auto req1 = ParseRequest("GET / HTTP/1.1");
+  ASSERT_EQUAL(req1.method, "GET");
+  ASSERT_EQUAL(req1.uri, "/");
+  ASSERT_EQUAL(req1.protocol, "HTTP/1.1");
 
-    const size_t text_len = 12;
-    const size_t first_part_len = 7;
-    TypeText(editor, "hello, world");
-    for(size_t i = 0; i < text_len; ++i) {
-      editor.Left();
-    }
-    editor.Cut(first_part_len);
-    for(size_t i = 0; i < text_len - first_part_len; ++i) {
-      editor.Right();
-    }
-    TypeText(editor, ", ");
-    editor.Paste();
-    editor.Left();
-    editor.Left();
-    editor.Cut(3);
-    
-    ASSERT_EQUAL(editor.GetText(), "world, hello");
-  }
-  {
-    Editor editor;
-    
-    TypeText(editor, "misprnit");
-    editor.Left();
-    editor.Left();
-    editor.Left();
-    editor.Cut(1);
-    editor.Right();
-    editor.Paste();
-    
-    ASSERT_EQUAL(editor.GetText(), "misprint");
-  }
+  auto req2 = ParseRequest("POST /order HTTP/1.1");
+  ASSERT_EQUAL(req2.method, "POST");
+  ASSERT_EQUAL(req2.uri, "/order");
+  ASSERT_EQUAL(req2.protocol, "HTTP/1.1");
 }
 
-void TestReverse() {
-  Editor editor;
+void TestBasic() {
+  const string input =
+    R"(GET / HTTP/1.1
+    POST /order HTTP/1.1
+    POST /product HTTP/1.1
+    POST /product HTTP/1.1
+    POST /product HTTP/1.1
+    GET /order HTTP/1.1
+    PUT /product HTTP/1.1
+    GET /basket HTTP/1.1
+    DELETE /product HTTP/1.1
+    GET / HTTP/1.1
+    GET / HTTP/1.1
+    GET /help HTTP/1.1
+    GET /upyachka HTTP/1.1
+    GET /unexpected HTTP/1.1
+    HEAD / HTTP/1.1)";
 
-  const string text = "esreveR";
-  for(char c : text) {
-    editor.Insert(c);
-    editor.Left();
-  }
-  
-  ASSERT_EQUAL(editor.GetText(), "Reverse");
+  const map<string_view, int> expected_method_count = {
+    {"GET", 8},
+    {"PUT", 1},
+    {"POST", 4},
+    {"DELETE", 1},
+    {"UNKNOWN", 1},
+  };
+  const map<string_view, int> expected_url_count = {
+    {"/", 4},
+    {"/order", 2},
+    {"/product", 5},
+    {"/basket", 1},
+    {"/help", 1},
+    {"unknown", 2},
+  };
+
+  istringstream is(input);
+  const Stats stats = ServeRequests(is);
+
+  ASSERT_EQUAL(stats.GetMethodStats(), expected_method_count);
+  ASSERT_EQUAL(stats.GetUriStats(), expected_url_count);
 }
 
-void TestNoText() {
-  Editor editor;
-  ASSERT_EQUAL(editor.GetText(), "");
-  
-  editor.Left();
-  editor.Left();
-  editor.Right();
-  editor.Right();
-  editor.Copy(0);
-  editor.Cut(0);
-  editor.Paste();
-  
-  ASSERT_EQUAL(editor.GetText(), "");
-}
+void TestAbsentParts() {
+  // Методы GetMethodStats и GetUriStats должны возвращать словари
+  // с полным набором ключей, даже если какой-то из них не встречался
 
-void TestEmptyBuffer() {
-  Editor editor;
+  const map<string_view, int> expected_method_count = {
+    {"GET", 0},
+    {"PUT", 0},
+    {"POST", 0},
+    {"DELETE", 0},
+    {"UNKNOWN", 0},
+  };
+  const map<string_view, int> expected_url_count = {
+    {"/", 0},
+    {"/order", 0},
+    {"/product", 0},
+    {"/basket", 0},
+    {"/help", 0},
+    {"unknown", 0},
+  };
+  const Stats default_constructed;
 
-  editor.Paste();
-  TypeText(editor, "example");
-  editor.Left();
-  editor.Left();
-  editor.Paste();
-  editor.Right();
-  editor.Paste();
-  editor.Copy(0);
-  editor.Paste();
-  editor.Left();
-  editor.Cut(0);
-  editor.Paste();
-  
-  ASSERT_EQUAL(editor.GetText(), "example");
+  ASSERT_EQUAL(default_constructed.GetMethodStats(), expected_method_count);
+  ASSERT_EQUAL(default_constructed.GetUriStats(), expected_url_count);
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestEditing);
-  RUN_TEST(tr, TestReverse);
-  RUN_TEST(tr, TestNoText);
-  RUN_TEST(tr, TestEmptyBuffer);
-
-  return 0;
+  RUN_TEST(tr, TestParseRequest);
+  RUN_TEST(tr, TestBasic);
+  RUN_TEST(tr, TestAbsentParts);
 }
