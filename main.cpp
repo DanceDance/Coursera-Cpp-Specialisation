@@ -1,116 +1,26 @@
+#include "simple_vector.h"
 #include "test_runner.h"
 
-#include <cstdint>
-#include <iterator>
 #include <numeric>
 #include <vector>
-#include <iostream>
-#include <algorithm>
+#include <tuple>
 
 using namespace std;
 
-template <typename RandomIt>
-void MakeJosephusPermutationWithCopy(RandomIt first, RandomIt last, uint32_t step_size) {
-  vector<typename RandomIt::value_type> pool(first, last);
-  size_t cur_pos = 0;
-  while (!pool.empty()) {
-    *(first++) = pool[cur_pos];
-    pool.erase(pool.begin() + cur_pos);
-    if (pool.empty()) {
-      break;
-    }
-    cur_pos = (cur_pos + step_size - 1) % pool.size();
-  }
-}
+void TestCopyAssignment() {
+  SimpleVector<int> numbers(10);
+  iota(numbers.begin(), numbers.end(), 1);
 
-template <typename RandomIt>
-void MakeJosephusPermutation(RandomIt first, RandomIt last, uint32_t step_size) {
-  
-  int n = last - first;
-  vector<int> new_pos(n);
-  iota(begin(new_pos), end(new_pos), 0);
-  MakeJosephusPermutationWithCopy(begin(new_pos), end(new_pos), step_size);
-  vector<int> index_arr(n);
-  for (int i = 0; i < n; i++) {
-    index_arr[new_pos[i]] = i;
-  }
-  for (int i = 0; i < n; i++) {
-      while (index_arr[i] != i) {
-          swap(first[i], first[index_arr[i]]);
-          swap(index_arr[i], index_arr[index_arr[i]]);
-      }
-  }
-}
+  SimpleVector<int> dest;
+  ASSERT_EQUAL(dest.Size(), 0u);
 
-vector<int> MakeTestVector() {
-  vector<int> numbers(10);
-  iota(begin(numbers), end(numbers), 0);
-  return numbers;
-}
-
-void TestIntVector() {
-  const vector<int> numbers = MakeTestVector();
-  // {
-  //   vector<int> numbers_copy = numbers;
-  //   MakeJosephusPermutation(begin(numbers_copy), end(numbers_copy), 1);
-  //   ASSERT_EQUAL(numbers_copy, numbers);
-  // }
-  {
-    vector<int> numbers_copy = numbers;
-    MakeJosephusPermutation(begin(numbers_copy), end(numbers_copy), 3);
-    ASSERT_EQUAL(numbers_copy, vector<int>({0, 3, 6, 9, 4, 8, 5, 2, 7, 1}));
-  }
-}
-
-// Это специальный тип, который поможет вам убедиться, что ваша реализация
-// функции MakeJosephusPermutation не выполняет копирование объектов.
-// Сейчас вы, возможно, не понимаете как он устроен, однако мы расскажем,
-// почему он устроен именно так, далее в блоке про move-семантику —
-// в видео «Некопируемые типы»
-
-struct NoncopyableInt {
-  int value;
-
-  NoncopyableInt(int value) : value(value) {}
-
-  NoncopyableInt(const NoncopyableInt&) = delete;
-  NoncopyableInt& operator=(const NoncopyableInt&) = delete;
-
-  NoncopyableInt(NoncopyableInt&&) = default;
-  NoncopyableInt& operator=(NoncopyableInt&&) = default;
-};
-
-bool operator == (const NoncopyableInt& lhs, const NoncopyableInt& rhs) {
-  return lhs.value == rhs.value;
-}
-
-ostream& operator << (ostream& os, const NoncopyableInt& v) {
-  return os << v.value;
-}
-
-void TestAvoidsCopying() {
-  vector<NoncopyableInt> numbers;
-  numbers.push_back({1});
-  numbers.push_back({2});
-  numbers.push_back({3});
-  numbers.push_back({4});
-  numbers.push_back({5});
-
-  MakeJosephusPermutation(begin(numbers), end(numbers), 2);
-
-  vector<NoncopyableInt> expected;
-  expected.push_back({1});
-  expected.push_back({3});
-  expected.push_back({5});
-  expected.push_back({4});
-  expected.push_back({2});
-
-  ASSERT_EQUAL(numbers, expected);
+  dest = numbers;
+  ASSERT_EQUAL(dest.Size(), numbers.Size());
+  ASSERT(dest.Capacity() >= dest.Size());
+  ASSERT(equal(dest.begin(), dest.end(), numbers.begin()));
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestIntVector);
-  RUN_TEST(tr, TestAvoidsCopying);
-  return 0;
+  RUN_TEST(tr, TestCopyAssignment);
 }
