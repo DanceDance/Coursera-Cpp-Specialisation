@@ -1,83 +1,65 @@
+#include "simple_vector_2.h"
 #include "test_runner.h"
 
+#include <algorithm>
+#include <iostream>
 #include <vector>
-
+#include <string>
 using namespace std;
 
-// Объявляем Sentence<Token> для произвольного типа Token
-// синонимом vector<Token>.
-// Благодаря этому в качестве возвращаемого значения
-// функции можно указать не малопонятный вектор векторов,
-// а вектор предложений — vector<Sentence<Token>>.
-template <typename Token>
-using Sentence = vector<Token>;
+void TestConstruction() {
+  SimpleVector<int> empty;
+  ASSERT_EQUAL(empty.Size(), 0u);
+  ASSERT_EQUAL(empty.Capacity(), 0u);
+  ASSERT(empty.begin() == empty.end());
 
-// Класс Token имеет метод bool IsEndSentencePunctuation() const
-template <typename Token>
-vector<Sentence<Token>> SplitIntoSentences(vector<Token> tokens) {
-  vector<Sentence<Token>> res(1);
-  bool need_split = false;
-  for (auto &token : tokens) {
-    if (token.IsEndSentencePunctuation()) {
-      need_split = true;
-      
-    } else {
-      if (need_split) {
-        res.push_back(Sentence<Token>());
-        need_split = false;
-      }
-    }
-    res.back().push_back(move(token));
+  SimpleVector<string> five_strings(5);
+  ASSERT_EQUAL(five_strings.Size(), 5u);
+  ASSERT(five_strings.Size() <= five_strings.Capacity());
+  for (auto& item : five_strings) {
+    ASSERT(item.empty());
   }
-  return res;
+  five_strings[2] = "Hello";
+  ASSERT_EQUAL(five_strings[2], "Hello");
 }
 
-
-struct TestToken {
-  string data;
-  bool is_end_sentence_punctuation = false;
-
-  bool IsEndSentencePunctuation() const {
-    return is_end_sentence_punctuation;
+void TestPushBack() {
+  SimpleVector<int> v;
+  for (int i = 10; i >= 1; --i) {
+    v.PushBack(i);
+    ASSERT(v.Size() <= v.Capacity());
   }
-  bool operator==(const TestToken& other) const {
-    return data == other.data && is_end_sentence_punctuation == other.is_end_sentence_punctuation;
-  }
+  sort(begin(v), end(v));
+
+  const vector<int> expected = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  ASSERT(equal(begin(v), end(v), begin(expected)));
+}
+
+class StringNonCopyable : public string {
+public:
+  using string::string;
+  StringNonCopyable(string&& other) : string(move(other)) {}
+  StringNonCopyable(const StringNonCopyable&) = delete;
+  StringNonCopyable(StringNonCopyable&&) = default;
+  StringNonCopyable& operator=(const StringNonCopyable&) = delete;
+  StringNonCopyable& operator=(StringNonCopyable&&) = default;
 };
 
-ostream& operator<<(ostream& stream, const TestToken& token) {
-  return stream << token.data;
-}
-
-// Тест содержит копирования объектов класса TestToken.
-// Для проверки отсутствия копирований в функции SplitIntoSentences
-// необходимо написать отдельный тест.
-void TestSplitting() {
-  ASSERT_EQUAL(
-    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!"}})),
-    vector<Sentence<TestToken>>({
-        {{"Split"}, {"into"}, {"sentences"}, {"!"}}
-    })
-  );
-
-  ASSERT_EQUAL(
-    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!", true}})),
-    vector<Sentence<TestToken>>({
-        {{"Split"}, {"into"}, {"sentences"}, {"!", true}}
-    })
-  );
-
-  ASSERT_EQUAL(
-    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!", true}, {"!", true}, {"Without"}, {"copies"}, {".", true}})),
-    vector<Sentence<TestToken>>({
-        {{"Split"}, {"into"}, {"sentences"}, {"!", true}, {"!", true}},
-        {{"Without"}, {"copies"}, {".", true}},
-    })
-  );
+void TestNoCopy() {
+  SimpleVector<StringNonCopyable> strings;
+  static const int SIZE = 10;
+  for (int i = 0; i < SIZE; ++i) {
+    strings.PushBack(StringNonCopyable(to_string(i)));
+  }
+  for (int i = 0; i < SIZE; ++i) {
+    ASSERT_EQUAL(strings[i], to_string(i));
+  }
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestSplitting);
+  RUN_TEST(tr, TestConstruction);
+  RUN_TEST(tr, TestPushBack);
+  RUN_TEST(tr, TestNoCopy);
   return 0;
 }
